@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -Wall -Wextra -g
-LDFLAGS = -lglfw -lGL -lGLEW -ldl
+LDFLAGS = -lglfw -lGL -lGLEW -ldl -lassimp
 INCLUDES = -Iinclude
 
 SRCDIR = libs
