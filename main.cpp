@@ -11,6 +11,8 @@
 
 #include "src/map.hpp"
 #include "src/player.hpp"
+#include "src/light.hpp"
+
 
 // Définir la taille de la carte (à ajuster en fonction de vos besoins)
 #define MAP_SIZE 256 // Exemple de taille de la carte
@@ -168,7 +170,8 @@ int main() {
     
     std::cout << "GLAD initialized successfully!" << std::endl;
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);  // Activer le test de profondeur pour afficher correctement les objets en 3D.
+    
 
     // Initialiser le joueur
     PlayerCameraConfig cameraConfig = {45.0f, 800.0f / 600.0f, 0.1f, 100.0f};

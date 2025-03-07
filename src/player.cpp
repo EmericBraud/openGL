@@ -22,7 +22,7 @@ void Player::updateCamera() {
 
 
 void Player::move(glm::vec3 delta) {
-    position += delta;
+    position += delta * 10.0f;
     updateCamera(); // Mettre à jour la caméra après déplacement
 }
 

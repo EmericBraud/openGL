@@ -17,45 +17,46 @@ public:
 
     // Fonction de chargement du modèle
     void loadModel(const std::string &modelPath) {
-        // Importer le modèle avec Assimp
+        // Importer le modèle avec Assimp en forçant la triangulation des faces
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(modelPath, aiProcess_Triangulate | aiProcess_FlipUVs);
-
+    
         if (!scene || !scene->mRootNode) {
             std::cerr << "Erreur lors du chargement du modèle: " << modelPath << std::endl;
             return;
         }
-
+    
         // Extraire les données des vertices et indices
         processNode(scene->mRootNode, scene);
-
+    
         // Créer les buffers pour les données des vertices et indices
         glGenVertexArrays(1, &carVAO);
         glGenBuffers(1, &carVBO);
         glGenBuffers(1, &carEBO);
-
+    
         // Lier le VAO
         glBindVertexArray(carVAO);
-
+    
         // Lier et charger les données du VBO
         glBindBuffer(GL_ARRAY_BUFFER, carVBO);
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-
+    
         // Lier et charger les indices dans l'EBO
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, carEBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-
+    
         // Définir les attributs des sommets (Position)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
         glEnableVertexAttribArray(0);
-
+    
         // Définir les attributs des sommets (Couleur)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
-
+    
         // Dé-lier le VAO
         glBindVertexArray(0);
     }
+    
 
     // Fonction de traitement des nodes et des meshes
     void processNode(aiNode* node, const aiScene* scene) {
@@ -73,38 +74,69 @@ public:
 
     // Fonction de traitement d'un mesh
     // Fonction de traitement d'un mesh
-void processMesh(aiMesh* mesh, const aiScene* scene) {
-    // Extraire les vertices et les indices
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        aiVector3D position = mesh->mVertices[i];
-
-        // Utiliser une couleur arbitraire (par exemple, rouge)
-        float red = 1.0f;
-        float green = 0.0f;
-        float blue = 0.0f;
-
-        // Ajouter la position et la couleur arbitraire dans les vectors
-        vertices.push_back(position.x);
-        vertices.push_back(position.y);
-        vertices.push_back(position.z);
-        vertices.push_back(red);    // Couleur rouge
-        vertices.push_back(green);  // Pas de vert
-        vertices.push_back(blue);   // Pas de bleu
-    }
-
-    // Extraire les indices
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-        aiFace face = mesh->mFaces[i];
-        for (unsigned int j = 0; j < face.mNumIndices; j++) {
-            indices.push_back(face.mIndices[j]);
+    void processMesh(aiMesh* mesh, const aiScene* scene) {
+        // Vérifier s'il y a un matériau assigné à ce mesh
+        aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+    
+        // Extraire la couleur diffuse (qui est souvent la couleur principale de l'objet)
+        aiColor4D diffuseColor(1.0f, 0.0f, 0.0f, 1.0f); // Par défaut, rouge
+        if (AI_SUCCESS == aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &diffuseColor)) {
+            // Si la couleur diffuse est définie, l'utiliser
+            diffuseColor = diffuseColor;
+        }
+    
+        // Extraire les vertices et les indices
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+            aiVector3D position = mesh->mVertices[i];
+    
+            // Utiliser la couleur diffuse extraite (par défaut rouge si non définie)
+            float red = diffuseColor.r;
+            float green = diffuseColor.g;
+            float blue = diffuseColor.b;
+    
+            // Ajouter la position et la couleur dans les vectors
+            vertices.push_back(position.x);
+            vertices.push_back(position.y);
+            vertices.push_back(position.z);
+            vertices.push_back(red);    // Couleur extraite
+            vertices.push_back(green);  // Couleur extraite
+            vertices.push_back(blue);   // Couleur extraite
+        }
+    
+        // Extraire les indices
+        for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+            aiFace face = mesh->mFaces[i];
+            for (unsigned int j = 0; j < face.mNumIndices; j++) {
+                indices.push_back(face.mIndices[j]);
+            }
         }
     }
-}
+    
 
     // Fonction de mise à jour de la position et de la rotation du modèle
     void update() {
         // Vous pouvez aussi faire d'autres mises à jour ici
     }
+    void calculateNormals(std::vector<float>& vertices, const std::vector<unsigned int>& indices) {
+        for (unsigned int i = 0; i < indices.size(); i += 3) {
+            unsigned int idx0 = indices[i];
+            unsigned int idx1 = indices[i + 1];
+            unsigned int idx2 = indices[i + 2];
+    
+            glm::vec3 v0(vertices[3 * idx0], vertices[3 * idx0 + 1], vertices[3 * idx0 + 2]);
+            glm::vec3 v1(vertices[3 * idx1], vertices[3 * idx1 + 1], vertices[3 * idx1 + 2]);
+            glm::vec3 v2(vertices[3 * idx2], vertices[3 * idx2 + 1], vertices[3 * idx2 + 2]);
+    
+            glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+    
+            // Ajouter la normale aux vertices (elle doit être à la même position)
+            vertices.push_back(normal.x);
+            vertices.push_back(normal.y);
+            vertices.push_back(normal.z);
+        }
+    }
+    
+    
 
     // Fonction de rendu du modèle de voiture
     void render(unsigned int shaderProgram, const glm::mat4 &view, const glm::mat4 &projection, glm::vec3 position, glm::vec3 direction, glm::vec3 up) {
