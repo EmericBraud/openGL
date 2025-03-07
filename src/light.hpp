@@ -68,9 +68,6 @@ public:
         glUniform1f(glGetUniformLocation(shaderProgram, "light.intensity"), intensity);
     }
 
-    void move(const glm::vec3& delta) {
-        position += delta;
-    }
 };
 
 #endif
