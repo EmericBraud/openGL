@@ -26,16 +26,23 @@ void main()
     vec3 projCoords = FragPosLightSpace.xyz / FragPosLightSpace.w;
     projCoords = projCoords * 0.5 + 0.5; // Convertir de [-1,1] à [0,1]
 
-    // Récupérer la profondeur du shadow map
-    float closestDepth = texture(shadowMap, projCoords.xy).r; 
-    float currentDepth = projCoords.z;
+    // Vérifier si les coordonnées projetées sont en dehors de la shadow map
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0) {
+        // Si en dehors de la shadow map, on attribue une ombre de 1 (pas d'ombre)
+        lighting *= 1.0;
+    } else {
+        // Récupérer la profondeur du shadow map
+        float closestDepth = texture(shadowMap, projCoords.xy).r; 
+        float currentDepth = projCoords.z;
 
-    // Comparer pour voir si l'on est dans l'ombre
-    float shadow = (currentDepth > closestDepth +0.0001) ? 0.5 : 1.0; // Atténuation si ombre
+        // Comparer pour voir si l'on est dans l'ombre
+        float shadow = (currentDepth > closestDepth + 0.0001) ? 0.5 : 1.0; // Atténuation si ombre
+
+        // Appliquer l'ombre
+        lighting *= shadow;
+    }
     float resu = max(0.0 , dot(normalize(lightPos - FragPos), lightDirection));
-
-    // Appliquer l'ombre
-    lighting *= resu * shadow;
+    lighting *= resu;
 
     FragColor = vec4(lighting, 1.0);
 }

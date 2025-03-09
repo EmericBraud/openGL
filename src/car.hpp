@@ -10,8 +10,23 @@
 
 class Car {
   public:
+    glm::vec3 position;
+    glm::vec3 up;
+    glm::vec3 direction;
+    float wheelsAngle;
+    float acceleration;
+    float velocity;
+    float angle;
+
     // Constructeur : Créer le modèle de la voiture (VAO, VBO, EBO)
-    Car() { loadModel("./models/Car2.obj"); }
+    Car() { 
+        loadModel("./models/Car2.obj");
+        up = glm::vec3(0.0f, 1.0f, 0.0f);
+        direction = glm::vec3(0.0f, 0.0f, 1.0f);
+        acceleration = 0.0f;
+        velocity = 0.0f;
+        angle = 0.0f;
+     }
 
     // Fonction de chargement du modèle
     void loadModel(const std::string &modelPath) {
@@ -64,6 +79,53 @@ class Car {
         // Dé-lier le VAO
         glBindVertexArray(0);
     }
+    
+
+    void updateCar(float deltaTime, int pedal_acc, int steeringWheel) {
+        const float acceleration_s = 5.0f;   // Accélération
+        const float rotation_s = 2.0f;       // Rotation plus rapide pour plus de réactivité
+        const float friction = 0.98f;        // Friction ajustée (plus naturelle)
+        const float steeringReturnSpeed = 1.5f; // Vitesse de retour du volant
+        const float maxVelocity = 20.0f;
+        // Gestion de l'accélération (pédale)
+        float targetAcceleration = acceleration_s * pedal_acc;
+        
+        // Appliquer l'accélération
+        velocity += targetAcceleration * deltaTime;
+    
+        // Appliquer la friction seulement si aucune accélération n'est appliquée
+        if (pedal_acc == 0 || pedal_acc * velocity < 0) {
+            velocity *= pow(friction, deltaTime);
+        }
+    
+        // Calculer la limite du volant en fonction de la vitesse
+        float maxWheelAngle = 3.141592653589793f / (4 * (1 + abs(velocity) * 0.3));
+    
+        // Gestion du volant : tourner ou revenir progressivement à zéro
+        if (steeringWheel != 0) {
+            wheelsAngle += rotation_s * (-steeringWheel) * deltaTime;
+        } else {
+            // Retour progressif du volant vers 0
+            wheelsAngle -= std::min(std::abs(wheelsAngle), steeringReturnSpeed * deltaTime) * glm::sign(wheelsAngle);
+        }
+    
+        // Limiter l'angle du volant
+        wheelsAngle = std::clamp(wheelsAngle, -maxWheelAngle, maxWheelAngle);
+        velocity = std::clamp(velocity, -maxVelocity, maxVelocity);
+        // Gérer la rotation de la voiture
+        float turnDirection = (velocity >= 0) ? 1.0f : -1.0f; // Inverser le tournant si on recule
+        angle += turnDirection * abs(velocity) * tan(wheelsAngle) * deltaTime * 0.5f;
+    
+        // Mise à jour de la position (utiliser l'angle de la voiture)
+        position += glm::vec3(sin(angle) * velocity * deltaTime, 
+                              0.0f, 
+                              cos(angle) * velocity * deltaTime);
+    
+        // Mise à jour de la direction (évite les bugs visuels)
+        direction = glm::vec3(sin(angle), 0.0f, cos(angle));
+    }
+    
+    
     
 
     // Fonction de traitement des nodes et des meshes
@@ -170,10 +232,7 @@ class Car {
         }
     }
 
-    // Fonction de rendu du modèle de voiture
-    void render(unsigned int shaderProgram, const glm::mat4 &view,
-                const glm::mat4 &projection, glm::vec3 position,
-                glm::vec3 direction, glm::vec3 up) {
+    glm::mat4 getModelMatrix(){
         // Créer la matrice modèle à partir de la position
         glm::mat4 model = glm::mat4(1.0f); // Identité
 
@@ -181,6 +240,7 @@ class Car {
         model = glm::translate(model, position - modelCenter);
 
         // 3. Appliquer la rotation
+
         glm::mat4 rotationMatrix =
             glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), direction, -up);
         model *= rotationMatrix;
@@ -188,8 +248,14 @@ class Car {
                             glm::vec3(1.0f, 0.0f, 0.0f));
 
         // 4. Remettre la voiture à sa position finale
-        model = glm::translate(model, modelCenter);
+        return glm::translate(model, modelCenter);
+    }
 
+    // Fonction de rendu du modèle de voiture
+    void render(unsigned int shaderProgram, const glm::mat4 &view,
+                const glm::mat4 &projection) {
+        
+        glm::mat4 model = getModelMatrix();
         // Envoyer les matrices au shader
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1,
                            GL_FALSE, glm::value_ptr(model));
@@ -207,23 +273,9 @@ class Car {
         glUseProgram(0);
     }
 
-    void renderForShadowMap(unsigned int shaderProgram, glm::vec3 position,
-        glm::vec3 direction, glm::vec3 up, GLuint shadowModelLoc) {
+    void renderForShadowMap(unsigned int shaderProgram, GLuint shadowModelLoc) {
     
-        glm::mat4 model = glm::mat4(1.0f); // Identité
-
-        // 2. Translation inverse pour recentrer le modèle à l'origine
-        model = glm::translate(model, position - modelCenter);
-
-        // 3. Appliquer la rotation
-        glm::mat4 rotationMatrix =
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), direction, -up);
-        model *= rotationMatrix;
-        model = glm::rotate(model, glm::radians(180.0f),
-                            glm::vec3(1.0f, 0.0f, 0.0f));
-
-        // 4. Remettre la voiture à sa position finale
-        model = glm::translate(model, modelCenter);
+        glm::mat4 model = getModelMatrix();
     
         // Envoyer la matrice modèle au shader
         glUniformMatrix4fv(shadowModelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -248,4 +300,5 @@ class Car {
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
     glm::vec3 modelCenter;
+    
 };

@@ -109,40 +109,40 @@ void processInput(GLFWwindow *window, Player &player) {
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
     player.lookBehind(false);
+    int steeringWheel = 0;
+    int pedalAcceleration = 0;
 
-    float cameraSpeed = 2.5f * deltaTime; // Vitesse de mouvement de la caméra
 
     // Avancer avec 'Z' (ou 'W' si on préfère utiliser cette touche sur un
     // clavier AZERTY)
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        player.move(player.getDirection() *
-                    cameraSpeed); // Se déplacer dans la direction de la caméra
+        pedalAcceleration ++;
     }
 
     // Reculer avec 'S'
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        player.move(
-            -player.getDirection() *
-            cameraSpeed); // Se déplacer en arrière par rapport à la caméra
-        player.lookBehind(true);
+        pedalAcceleration --;
     }
 
     // Tourner à gauche avec 'Q'
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        player.rotate(-cameraSpeed); // Rotation vers la gauche (sens inverse
-                                     // des aiguilles d'une montre)
+        steeringWheel--;
     }
 
     // Tourner à droite avec 'D'
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        player.rotate(cameraSpeed); // Rotation vers la droite (sens des
-                                    // aiguilles d'une montre)
+        steeringWheel ++;
     }
 
+    //regarder derrière
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        player.lookBehind(true);
+    }
 
     // Quitter avec 'Echap'
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+    player.car.updateCar(deltaTime, pedalAcceleration, steeringWheel);
 }
 
 int main() {

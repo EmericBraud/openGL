@@ -21,17 +21,22 @@ void main() {
 
     vec3 projCoords = FragPosLightSpace.xyz / FragPosLightSpace.w;
     projCoords = projCoords * 0.5 + 0.5; // Convertir de [-1,1] à [0,1]
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0) {
+            // Si en dehors de la shadow map, on attribue une ombre de 1 (pas d'ombre)
+            lighting *= 1.0;
+        } else {
+            // Récupérer la profondeur du shadow map
+            float closestDepth = texture(shadowMap, projCoords.xy).r; 
+            float currentDepth = projCoords.z;
 
- // Récupérer la profondeur du shadow map
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
-    float currentDepth = projCoords.z;
+            // Comparer pour voir si l'on est dans l'ombre
+            float shadow = (currentDepth > closestDepth + 0.0001) ? 0.5 : 1.0; // Atténuation si ombre
 
-    // Comparer pour voir si l'on est dans l'ombre
-    float shadow = (currentDepth > closestDepth + 0.0001) ? 0.5 : 1.0; // Atténuation si ombre
-    float spotLight = max(0.0, dot(normalize(lightPos - fragPos), lightDirection));
-
-    // Appliquer l'ombre
-    lighting *= spotLight * shadow * fragColor;
+            // Appliquer l'ombre
+            lighting *= shadow;
+        }
+    float resu = max(0.0 , dot(normalize(lightPos - fragPos), lightDirection));
+    lighting *= resu * fragColor;
 
     //Reflection of skybox
     vec3 viewDir = normalize(fragPos - viewPos);
