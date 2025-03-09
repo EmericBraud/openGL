@@ -11,7 +11,7 @@
 class Car {
   public:
     // Constructeur : Créer le modèle de la voiture (VAO, VBO, EBO)
-    Car() { loadModel("./models/Car.obj"); }
+    Car() { loadModel("./models/Car2.obj"); }
 
     // Fonction de chargement du modèle
     void loadModel(const std::string &modelPath) {

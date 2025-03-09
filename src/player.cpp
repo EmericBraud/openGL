@@ -5,6 +5,7 @@ Player::Player(const glm::vec3 &startPosition, const glm::vec3 &cameraOffset,
       direction(0.0f, 0.0f, 1.0f) {
         
     up = glm::vec3(0.0f, 1.0f, 0.0f);
+    lookingBehind = false;
     // Initialisation de la matrice de projection
     projectionMatrix = glm::perspective(
         glm::radians(cameraConfig.fov), cameraConfig.aspectRatio,
@@ -15,7 +16,7 @@ Player::Player(const glm::vec3 &startPosition, const glm::vec3 &cameraOffset,
 }
 
 void Player::updateCamera() {
-    glm::vec3 cameraPosition = position + cameraOffset - direction * 5.0f;
+    glm::vec3 cameraPosition = getViewPos();
     glm::vec3 target = position; 
     viewMatrix = glm::lookAt(cameraPosition, target + glm::vec3(0.0f, cameraOffset.y/2, 0.0f), up);
 }

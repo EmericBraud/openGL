@@ -24,6 +24,7 @@ class Player{
     glm::vec3 direction;
     glm::vec3 up;
     Car car;
+    bool lookingBehind;
 
 
     public:
@@ -39,9 +40,21 @@ class Player{
     void renderForShadowMap(unsigned int shaderProgram, GLuint shadowModelLoc){
         car.renderForShadowMap(shaderProgram, position, direction, up, shadowModelLoc);
     }
+    glm::vec3 getViewPos(){
+        if(lookingBehind){
+            return position + cameraOffset + direction * 5.0f;
+        }
+        return position + cameraOffset - direction * 5.0f;
+    }
     // Retourner la direction actuelle du joueur
     glm::vec3 getDirection() const {
         return direction;
+    }
+    void lookBehind(bool activator){
+        lookingBehind = false;
+        if(activator){
+            lookingBehind = true;
+        }
     }
 };
 

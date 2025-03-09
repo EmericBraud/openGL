@@ -108,6 +108,7 @@ void processInput(GLFWwindow *window, Player &player) {
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
+    player.lookBehind(false);
 
     float cameraSpeed = 2.5f * deltaTime; // Vitesse de mouvement de la caméra
 
@@ -123,6 +124,7 @@ void processInput(GLFWwindow *window, Player &player) {
         player.move(
             -player.getDirection() *
             cameraSpeed); // Se déplacer en arrière par rapport à la caméra
+        player.lookBehind(true);
     }
 
     // Tourner à gauche avec 'Q'
@@ -136,6 +138,7 @@ void processInput(GLFWwindow *window, Player &player) {
         player.rotate(cameraSpeed); // Rotation vers la droite (sens des
                                     // aiguilles d'une montre)
     }
+
 
     // Quitter avec 'Echap'
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -471,6 +474,11 @@ int main() {
         glUniform3fv(glGetUniformLocation(carShaderProgram, "lightPos"), 1, glm::value_ptr(light.position));
         glUniform3fv(glGetUniformLocation(carShaderProgram, "lightDir"), 1, glm::value_ptr(light.direction));
         glUniform1i(glGetUniformLocation(carShaderProgram, "shadowMap"), light.shadowMapTexture);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.getCumbeMapTexture());
+        glUniform1i(glGetUniformLocation(carShaderProgram, "skybox"), 2);
+        glUniform3fv(glGetUniformLocation(carShaderProgram, "viewPos"), 1, glm::value_ptr(player.getViewPos()));
+
         player.render(carShaderProgram);
         glActiveTexture(0);
         skybox.render(skyboxShader, glm::mat4(glm::mat3(player.getViewMatrix())), player.getProjectionMatrix());
