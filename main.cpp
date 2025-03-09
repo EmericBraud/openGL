@@ -12,6 +12,8 @@
 #include "src/light.hpp"
 #include "src/map.hpp"
 #include "src/player.hpp"
+#include "src/skybox.hpp"
+
 
 // Définir la taille de la carte (à ajuster en fonction de vos besoins)
 #define MAP_SIZE 256 // Exemple de taille de la carte
@@ -383,7 +385,7 @@ int main() {
     Light light(SPOT, glm::vec3(8.0f, 10.0f, 8.0f),
                 glm::vec3(0.25f, -1.0f, 0.25f));
     // 1. Rendu dans la shadow map
-    glViewport(0, 0, 1024, 1024);
+    glViewport(0, 0, 2048, 2048);
     glBindFramebuffer(GL_FRAMEBUFFER, light.shadowMapFBO);
     glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -397,6 +399,19 @@ int main() {
         glGetUniformLocation(shadowShader, "lightSpaceMatrix");
     int shadowModelLoc = glGetUniformLocation(shadowShader, "model");
 
+    std::vector<std::string> faces = {
+        "assets/skybox/right.jpg",
+        "assets/skybox/left.jpg",
+        "assets/skybox/top.jpg",
+        "assets/skybox/bottom.jpg",
+        "assets/skybox/front.jpg",
+        "assets/skybox/back.jpg"
+    };
+    Skybox skybox(faces);
+
+    int skyboxShader = createShaderProgram("shaders/skybox.vs", "shaders/skybox.fs");
+
+
     // Boucle de rendu
     while (!glfwWindowShouldClose(window)) {
         processInput(window, player);
@@ -408,7 +423,7 @@ int main() {
         player.updateCamera();
 
         // 1. Rendu dans la shadow map
-        glViewport(0, 0, 1024, 1024); // Vue de la shadow map
+        glViewport(0, 0, 2048, 2048); // Vue de la shadow map
         glBindFramebuffer(GL_FRAMEBUFFER, light.shadowMapFBO);
 
         glUseProgram(shadowShader);
@@ -427,6 +442,7 @@ int main() {
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0); // Dé-finir le framebuffer
         glViewport(0, 0, 800, 600); // Retourner à la taille de la fenêtre
+        
 
         // Afficher le terrain
         glUseProgram(terrainShaderProgram);
@@ -447,9 +463,22 @@ int main() {
 
         glDrawElements(GL_TRIANGLES, terrainIndices.size(), GL_UNSIGNED_INT, 0);
         glUseProgram(0);
-
+        
+        glUseProgram(carShaderProgram);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, light.shadowMapTexture);
+        glUniformMatrix4fv(glGetUniformLocation(carShaderProgram, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(light.lightSpaceMatrix));
+        glUniform3fv(glGetUniformLocation(carShaderProgram, "lightPos"), 1, glm::value_ptr(light.position));
+        glUniform3fv(glGetUniformLocation(carShaderProgram, "lightDir"), 1, glm::value_ptr(light.direction));
+        glUniform1i(glGetUniformLocation(carShaderProgram, "shadowMap"), light.shadowMapTexture);
         player.render(carShaderProgram);
+        glActiveTexture(0);
+        skybox.render(skyboxShader, glm::mat4(glm::mat3(player.getViewMatrix())), player.getProjectionMatrix());
 
+        /*GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            std::cout << "Erreur OpenGL: " << err << std::endl;
+        }*/
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

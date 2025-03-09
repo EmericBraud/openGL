@@ -19,48 +19,52 @@ class Car {
         Assimp::Importer importer;
         const aiScene *scene = importer.ReadFile(
             modelPath, aiProcess_Triangulate | aiProcess_FlipUVs);
-
+    
         if (!scene || !scene->mRootNode) {
-            std::cerr << "Erreur lors du chargement du modèle: " << modelPath
-                      << std::endl;
+            std::cerr << "Erreur lors du chargement du modèle: " << modelPath << std::endl;
             return;
         }
-
+    
         // Extraire les données des vertices et indices
         processNode(scene->mRootNode, scene);
-
+    
         // Créer les buffers pour les données des vertices et indices
         glGenVertexArrays(1, &carVAO);
         glGenBuffers(1, &carVBO);
         glGenBuffers(1, &carEBO);
-
+    
         // Lier le VAO
         glBindVertexArray(carVAO);
-
+    
         // Lier et charger les données du VBO
         glBindBuffer(GL_ARRAY_BUFFER, carVBO);
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
                      vertices.data(), GL_STATIC_DRAW);
-
+    
         // Lier et charger les indices dans l'EBO
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, carEBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                      indices.size() * sizeof(unsigned int), indices.data(),
                      GL_STATIC_DRAW);
-
+    
         // Définir les attributs des sommets (Position)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
-                              (void *)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)0);
         glEnableVertexAttribArray(0);
-
+    
         // Définir les attributs des sommets (Couleur)
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float),
                               (void *)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
-
+    
+        // Définir les attributs des sommets (Normale)
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float),
+                              (void *)(6 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+    
         // Dé-lier le VAO
         glBindVertexArray(0);
     }
+    
 
     // Fonction de traitement des nodes et des meshes
     void processNode(aiNode *node, const aiScene *scene) {
@@ -81,35 +85,46 @@ class Car {
     void processMesh(aiMesh *mesh, const aiScene *scene) {
         // Vérifier s'il y a un matériau assigné à ce mesh
         aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-
-        // Extraire la couleur diffuse (qui est souvent la couleur principale de
-        // l'objet)
+    
+        // Extraire la couleur diffuse (qui est souvent la couleur principale de l'objet)
         aiColor4D diffuseColor(1.0f, 0.0f, 0.0f, 1.0f); // Par défaut, rouge
-        if (AI_SUCCESS == aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE,
-                                             &diffuseColor)) {
+        if (AI_SUCCESS == aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &diffuseColor)) {
             // Si la couleur diffuse est définie, l'utiliser
             diffuseColor = diffuseColor;
         }
-
-        // Extraire les vertices et les indices
+    
+        // Calculer les normales pour ce mesh
+        std::vector<glm::vec3> normals;
         for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
             aiVector3D position = mesh->mVertices[i];
-
-            // Utiliser la couleur diffuse extraite (par défaut rouge si non
-            // définie)
+            // Initialiser la normale à zéro
+            glm::vec3 normal(0.0f);
+    
+            if (mesh->HasNormals()) {
+                // Si les normales existent, les récupérer
+                aiVector3D aiNormal = mesh->mNormals[i];
+                normal = glm::vec3(aiNormal.x, aiNormal.y, aiNormal.z);
+            }
+    
+            // Utiliser la couleur diffuse extraite (par défaut rouge si non définie)
             float red = diffuseColor.r;
             float green = diffuseColor.g;
             float blue = diffuseColor.b;
-
-            // Ajouter la position et la couleur dans les vectors
+    
+            // Ajouter la position, la couleur et la normale dans les vectors
             vertices.push_back(position.x);
             vertices.push_back(position.y);
             vertices.push_back(position.z);
             vertices.push_back(red);   // Couleur extraite
             vertices.push_back(green); // Couleur extraite
             vertices.push_back(blue);  // Couleur extraite
+    
+            // Ajouter la normale aux données
+            vertices.push_back(normal.x);
+            vertices.push_back(normal.y);
+            vertices.push_back(normal.z);
         }
-
+    
         // Extraire les indices
         for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
             aiFace face = mesh->mFaces[i];
@@ -117,6 +132,7 @@ class Car {
                 indices.push_back(face.mIndices[j]);
             }
         }
+    
         glm::vec3 sumPositions(0.0f);
         for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
             aiVector3D position = mesh->mVertices[i];
@@ -124,6 +140,7 @@ class Car {
         }
         modelCenter = sumPositions / static_cast<float>(mesh->mNumVertices);
     }
+    
 
     // Fonction de mise à jour de la position et de la rotation du modèle
     void update() {
@@ -172,9 +189,6 @@ class Car {
 
         // 4. Remettre la voiture à sa position finale
         model = glm::translate(model, modelCenter);
-
-        // Utiliser le shader
-        glUseProgram(shaderProgram);
 
         // Envoyer les matrices au shader
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1,

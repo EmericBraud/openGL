@@ -20,7 +20,7 @@ void main()
     // Éclairage de base (Lambert)
     float diff = max(dot(norm, lightDirection), 0.0);
     vec3 lightColor = vec3(1.0, 1.0, 1.0);
-    vec3 lighting = diff * lightColor;
+    vec3 lighting = diff * lightColor * fragColor;
 
     // Convertir FragPosLightSpace en coordonnées de texture
     vec3 projCoords = FragPosLightSpace.xyz / FragPosLightSpace.w;
