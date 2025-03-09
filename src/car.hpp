@@ -193,6 +193,35 @@ class Car {
         glUseProgram(0);
     }
 
+    void renderForShadowMap(unsigned int shaderProgram, glm::vec3 position,
+        glm::vec3 direction, glm::vec3 up, GLuint shadowModelLoc) {
+    
+        glm::mat4 model = glm::mat4(1.0f); // Identité
+
+        // 2. Translation inverse pour recentrer le modèle à l'origine
+        model = glm::translate(model, position - modelCenter);
+
+        // 3. Appliquer la rotation
+        glm::mat4 rotationMatrix =
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), direction, -up);
+        model *= rotationMatrix;
+        model = glm::rotate(model, glm::radians(180.0f),
+                            glm::vec3(1.0f, 0.0f, 0.0f));
+
+        // 4. Remettre la voiture à sa position finale
+        model = glm::translate(model, modelCenter);
+    
+        // Envoyer la matrice modèle au shader
+        glUniformMatrix4fv(shadowModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    
+        // Lier le VAO et dessiner pour la shadow map (seulement la profondeur)
+        glBindVertexArray(carVAO);
+        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+
+    }
+    
+
     // Destructor : libérer les ressources
     ~Car() {
         glDeleteVertexArrays(1, &carVAO);

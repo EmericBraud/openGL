@@ -36,6 +36,9 @@ class Player{
     void render(const unsigned int shaderProgram){
         car.render(shaderProgram, viewMatrix, projectionMatrix, position, direction, up);
     }
+    void renderForShadowMap(unsigned int shaderProgram, GLuint shadowModelLoc){
+        car.renderForShadowMap(shaderProgram, position, direction, up, shadowModelLoc);
+    }
     // Retourner la direction actuelle du joueur
     glm::vec3 getDirection() const {
         return direction;
